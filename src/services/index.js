@@ -6,8 +6,8 @@ export function fetchData() {
     .get(`${BASE_URL}/journey`)
     .then((response) => {
       if (response.data) {
-        const jLength = Object.keys(response.data).length;
-        console.log(`Total routes ${jLength}`);
+        const journeysCount = Object.keys(response.data).length;
+        console.log(`Total routes: ${journeysCount}`);
       } else {
         console.error("Error: ", response.data);
       }
