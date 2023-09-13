@@ -14,7 +14,6 @@ export default {
   components: {
     TextList,
     MapViewer,
-    // Test,
   },
 };
 </script>

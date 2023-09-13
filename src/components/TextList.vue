@@ -2,12 +2,15 @@
   <div class="text-list">
     <h2>Routes Lists</h2>
     <ul>
-      <li v-for="(text, index) in pageEntries" :key="index">{{ text }}</li>
+      <button
+        v-for="(route, index) in pageEntries"
+        :key="index"
+        @click="selectRoute(route)"
+      >
+        {{ route }}
+      </button>
     </ul>
-    <paginator
-    :entriesCount="entries.length"
-     v-model:currentPage="page"
-    ></paginator>
+    <paginator :entriesCount="entries.length" v-model:currentPage="page"></paginator>
   </div>
 </template>
 
@@ -23,7 +26,7 @@ export default {
   data() {
     return {
       routes: [],
-      entriesPerPage: 10,
+      entriesPerPage: 15,
       page: 1,
     };
   },
@@ -35,14 +38,17 @@ export default {
   methods: {
     fetchJourneys() {
       axios.get(`${BASE_URL}/journey`).then((response) => {
-        if (response) {
+        if (response.data) {
           this.routes = Object.keys(response.data);
           console.log(`All Journeys: ${this.routes}`);
         }
       });
     },
     onPageChanged(e) {
-      this.page = e
+      this.page = e;
+    },
+    selectRoute(route) {
+      this.$root.$emit("route-selected", route);
     },
   },
   computed: {
@@ -59,9 +65,10 @@ export default {
       const result = this.routes.slice(this.startIndex, this.endIndex);
       return result;
     },
-  }
+  },
 };
 </script>
+
 
 <style scoped>
 .text-list {
