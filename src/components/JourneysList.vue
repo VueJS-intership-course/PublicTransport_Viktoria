@@ -15,6 +15,8 @@
     <div v-else>Loading journeys...</div>
   </div>
 </template>
+
+
 <script>
 import Paginator from "./Paginator.vue";
 import api from "../services/index.js";

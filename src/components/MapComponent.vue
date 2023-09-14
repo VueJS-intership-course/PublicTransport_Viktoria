@@ -30,11 +30,13 @@ export default {
       lineVectorLayer: null,
     };
   },
+  
   mounted() {
     console.log("MapComponent mounted");
     this.map = initializeMap(this.$refs.map);
     this.initializePopup();
     this.map.on("click", this.showPopup.bind(this));
+
     //load prev journey if available
     const prevJourney = this.$route.params.id;
     if (prevJourney) {
