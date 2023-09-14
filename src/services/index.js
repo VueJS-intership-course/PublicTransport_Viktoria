@@ -1,18 +1,32 @@
 import axios from "axios";
-import { BASE_URL } from "./../utils/constants.js";
+import { BASE_URL } from "../utils/constants";
 
-export function fetchData() {
-  axios
-    .get(`${BASE_URL}/journey`)
-    .then((response) => {
-      if (response.data) {
-        const jLength = Object.keys(response.data).length;
-        console.log(`Total routes ${jLength}`);
-      } else {
-        console.error("Error: ", response.data);
-      }
-    })
-    .catch((error) => console.error("Error fetching data:", error));
-}
+const instance = axios.create({
+  baseURL: BASE_URL,
+});
 
-export default fetchData;
+const api = {
+  async fetchJourneys() {
+    try {
+      const response = await instance.get("/journey");
+    //   console.log("response", Object.keys(response.data));
+      return Object.keys(response.data); 
+    } catch (error) {
+      console.error("Error fetching journeys:", error);
+      throw error;
+    }
+  },
+
+  async fetchBusStops(journeyId) {
+    try {
+      const response = await instance.get(`/journey/${journeyId}`);
+      return response.data[journeyId]; 
+    } catch (error) {
+      console.error("Error fetching bus stops:", error);
+      throw error;
+    }
+  },
+};
+
+export default api;
+

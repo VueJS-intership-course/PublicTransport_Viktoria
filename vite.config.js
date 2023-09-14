@@ -17,5 +17,3 @@ export default defineConfig({
   },
 });
 
-//this api returns an object for a speicific bus stops. each stop has its own latitude and longitude. how do i get them and 
-//visualize them on an openlayers map? - https://v0.ovapi.nl/journey/ARR_20230911_28094_1015_0

@@ -1,18 +1,13 @@
-//TODO
-
-<!-- <template>
+<template>
   <div>
     <ul>
       <li v-if="visiblePrevBtn" @click="movePage(-1)">
         <button :disabled="isDisabledPreviousBtn">Previous</button>
       </li>
-      <li v-for="(pageNum, index) in pagesCount" :key="index">
-        <button
-          @click="onChangePage(pageNum)"
-          :class="{ active: pageNum === currentPage }"
-        >
-          {{ pageNum }}
-        </button>
+      <li>
+        <p>
+          {{ currentPage }} / {{ Math.ceil(entriesCount / entriesPerPage) }}
+        </p>
       </li>
       <li v-if="visibleNextBtn">
         <button @click="movePage(1)" :disabled="isDisabledNextBtn">Next</button>
@@ -102,4 +97,4 @@ button[disabled]:hover {
   border-color: transparent;
   outline: none;
 }
-</style> -->
+</style>
