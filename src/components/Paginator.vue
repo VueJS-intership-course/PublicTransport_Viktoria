@@ -1,5 +1,3 @@
-//TODO
-
 <template>
   <div>
     <ul>

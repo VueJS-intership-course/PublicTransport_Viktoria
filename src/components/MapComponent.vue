@@ -1,129 +1,209 @@
 <template>
   <div class="map-viewer">
     <div id="map" ref="map" class="map"></div>
+    <div id="popup" ref="popup" class="ol-popup">
+      <button class="ol-popup-closer" @click="closePopup"></button>
+      <div id="popup-content"></div>
+    </div>
   </div>
 </template>
 
 <script>
 import "ol/ol.css";
-import Map from "ol/Map";
-import View from "ol/View";
-import TileLayer from "ol/layer/Tile";
-import XYZ from "ol/source/XYZ";
+import api from "../services/index.js";
 import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
 import { fromLonLat } from "ol/proj";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
-import axios from "axios";
-import { BASE_URL } from "../utils/constants.js";
-import api from "../services/index.js";
-
+import CircleStyle from "ol/style/Circle";
+import { initializeMap, createPopup, addPopupToMap } from "../utils/map.js";
+import { Style, Stroke, Fill } from "ol/style";
+import LineString from "ol/geom/LineString";
 
 export default {
   data() {
     return {
       map: null,
+      vectorLayer: null,
+      popup: null,
+      lineVectorLayer: null,
     };
   },
   mounted() {
-    this.initializeMap();
-    this.fetchBusStopsData();
+    console.log("MapComponent mounted");
+    this.map = initializeMap(this.$refs.map);
+    this.initializePopup();
+    this.map.on("click", this.showPopup.bind(this));
+    //load prev journey if available
+    const prevJourney = this.$route.params.id;
+    if (prevJourney) {
+      this.fetchBusStops(prevJourney);
+    }
   },
 
-  created() {
-    this.fetchBusStopsData();
+  watch: {
+    $route: "fetchBusStops",
   },
 
   methods: {
-    initializeMap() {
-      this.map = new Map({
-        target: this.$refs.map,
-        layers: [
-          new TileLayer({
-            source: new XYZ({
-              url: "https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    visualizeOnMap(busStops) {
+      if (busStops) {
+        const vectorSource = new VectorSource();
+        this.vectorLayer = new VectorLayer({
+          source: vectorSource,
+          style: this.createStopStyle,
+        });
+
+        const lineVectorSource = new VectorSource();
+
+        busStops.forEach((stop, index) => {
+          if (stop.Latitude && stop.Longitude) {
+            const coordinates = fromLonLat([stop.Longitude, stop.Latitude]);
+            const feature = new Feature({
+              geometry: new Point(coordinates),
+            });
+
+            feature.set("TimingPointName", stop.TimingPointName);
+            feature.set("TripStopStatus", stop.TripStopStatus);
+            feature.set("WheelChairAccessible", stop.WheelChairAccessible);
+
+            vectorSource.addFeature(feature);
+
+            if (index > 0) {
+              const prevStop = busStops[index - 1];
+              if (prevStop.Latitude && prevStop.Longitude) {
+                const prevCoordinates = fromLonLat([
+                  prevStop.Longitude,
+                  prevStop.Latitude,
+                ]);
+
+                const lineFeature = new Feature({
+                  geometry: new LineString([prevCoordinates, coordinates]),
+                });
+
+                lineVectorSource.addFeature(lineFeature);
+              }
+            }
+          }
+        });
+
+        this.map.addLayer(this.vectorLayer);
+
+        this.lineVectorLayer = new VectorLayer({
+          source: lineVectorSource,
+          style: new Style({
+            stroke: new Stroke({
+              color: "blue",
+              width: 2,
             }),
           }),
-        ],
-        view: new View({
-          center: fromLonLat([6, 52]),
-          zoom: 7,
+        });
+        this.map.addLayer(this.lineVectorLayer);
+      } else {
+        console.error("Invalid busStops data:", busStops);
+      }
+    },
+
+    createStopStyle(feature) {
+      return new Style({
+        image: new CircleStyle({
+          radius: 7,
+          fill: new Fill({
+            color: "blue",
+          }),
+          stroke: new Stroke({
+            color: "white",
+            width: 2,
+          }),
         }),
       });
     },
 
-   visualizeOnMap(busStops) {
-  if (busStops && typeof busStops === "object") {
-    const vectorSource = new VectorSource();
-    const vectorLayer = new VectorLayer({
-      source: vectorSource,
-    });
+    async fetchBusStops() {
+      this.closePopup();
 
-    Object.values(busStops).forEach((stop) => {
-      if (stop.Latitude && stop.Longitude) {
-        const coordinates = fromLonLat([stop.Longitude, stop.Latitude]);
-        const feature = new Feature({
-          geometry: new Point(coordinates),
-        });
+      console.log("Fetching bus stops...");
+      const journeyId = this.$route.params.id;
+      const journeyData = await api.fetchBusStops(journeyId);
+      const busStops = Object.values(journeyData.Stops);
+      console.log("Fetched stops:", busStops);
 
-        vectorSource.addFeature(feature);
+      //remove old journey layer
+      if (this.vectorLayer) {
+        this.map.removeLayer(this.vectorLayer);
+        this.map.removeLayer(this.lineVectorLayer);
       }
-    });
-    this.map.addLayer(vectorLayer);
-  } else {
-    console.error("Invalid busStops data:", busStops);
-  }
-},
-
-
-    fetchRoutesLength() {
-      api.getRoutesLength()
-        .then((journeysCount) => {
-          console.log(`Total routes: ${journeysCount}`);
-        })
-        .catch((error) => {
-          console.error("Error fetching data:", error);
-        });
+      this.visualizeOnMap(busStops);
     },
 
-    fetchBusStopsData() {
-  const apiUrl = `${BASE_URL}/journey/HTM_20230912_21_210072_0`;
+    //popup logic -> TODO
+    initializePopup() {
+      this.popup = createPopup(this.$refs.popup);
+      addPopupToMap(this.map, this.popup);
+    },
 
-  axios
-    .get(apiUrl)
-    .then((response) => {
-      if (response.data.HTM_20230912_21_210072_0.Stops) {
-        const busStops = response.data.HTM_20230912_21_210072_0.Stops;
-        if (busStops) {
-          this.visualizeOnMap(busStops);
-          console.log(busStops);
-        } else {
-          console.error("Bus stops data is undefined.");
-        }
+    showPopup(event) {
+      const feature = this.map.forEachFeatureAtPixel(
+        event.pixel,
+        (feature) => feature
+      );
+
+      if (feature) {
+        const stopInfo = {
+          TimingPointName: feature.get("TimingPointName"),
+          TripStopStatus: feature.get("TripStopStatus"),
+          WheelChairAccessible: feature.get("WheelChairAccessible"),
+        };
+
+        const popupContent = `
+            <p><strong>Timing Point Name:</strong> ${stopInfo.TimingPointName}</p>
+            <p><strong>Trip Stop Status:</strong> ${stopInfo.TripStopStatus}</p>
+            <p><strong>Wheelchair Accessible:</strong> ${stopInfo.WheelChairAccessible}</p>
+          `;
+
+        this.$refs.popup.querySelector("#popup-content").innerHTML =
+          popupContent;
+        this.popup.setPosition(event.coordinate);
       } else {
-        console.error("Error: ", response.data);
+        this.closePopup();
       }
-    })
-    .catch((error) => console.error("Error fetching data:", error));
-},
-  },
+    },
 
+    closePopup() {
+      this.popup.setPosition(undefined);
+    },
+  },
 };
 </script>
 
 <style scoped>
 .map-viewer {
-  width: 90%;
-  height: 100%;
-  padding: 20px;
-  box-sizing: border-box;
+  width: 100%;
+  height: 500px;
 }
 
 .map {
   width: 100%;
-  height: 600px;
+  height: 100%;
+}
+
+.ol-popup {
+  position: absolute;
+  background-color: white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  padding: 15px;
+  border-radius: 10px;
   border: 1px solid #ccc;
-  border-radius: 5px;
+  bottom: 12px;
+  left: -50px;
+  min-width: 200px;
+}
+
+.ol-popup-closer {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  cursor: pointer;
 }
 </style>

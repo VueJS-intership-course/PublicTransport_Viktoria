@@ -5,43 +5,28 @@ const instance = axios.create({
   baseURL: BASE_URL,
 });
 
-// API functions
 const api = {
-  getRoutesLength: () => {
-    return instance.get("/journey")
-      .then((response) => {
-        if (response.data) {
-          const journeysCount = Object.keys(response.data).length;
-          console.log(`Total routes: ${journeysCount}`);
-          return journeysCount;
-        } else {
-          console.error("Error: ", response.data);
-          throw new Error("Error fetching data");
-        }
-      })
-      .catch((error) => {
-        console.error("Error fetching data:", error);
-        throw error;
-      });
+  async fetchJourneys() {
+    try {
+      const response = await instance.get("/journey");
+    //   console.log("response", Object.keys(response.data));
+      return Object.keys(response.data); 
+    } catch (error) {
+      console.error("Error fetching journeys:", error);
+      throw error;
+    }
   },
 
-  getBusStopsData: (journeyId) => {
-    const apiUrl = `/journey/${journeyId}`;
-
-    return instance.get(apiUrl)
-      .then((response) => {
-        if (response.data) {
-          return response.data.Stops;
-        } else {
-          console.error("Error: ", response.data);
-          throw new Error("Error fetching data");
-        }
-      })
-      .catch((error) => {
-        console.error("Error fetching data:", error);
-        throw error;
-      });
+  async fetchBusStops(journeyId) {
+    try {
+      const response = await instance.get(`/journey/${journeyId}`);
+      return response.data[journeyId]; 
+    } catch (error) {
+      console.error("Error fetching bus stops:", error);
+      throw error;
+    }
   },
 };
 
 export default api;
+
