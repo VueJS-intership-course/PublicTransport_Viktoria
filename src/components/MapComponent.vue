@@ -1,20 +1,16 @@
 <template>
-  <div class="map-viewer">
+  <div v-if="$route.params.id" class="map-viewer">
     <div id="map" ref="map" class="map"></div>
-    <div id="popup" ref="popup" class="ol-popup">
-      <button class="ol-popup-closer" @click="closePopup"></button>
-      <div id="popup-content">
-        <p>
-          <strong>Timing Point Name:</strong> {{ popupInfo.TimingPointName }}
-        </p>
-        <p>
-          <strong>Trip Stop Status:</strong> {{ popupInfo.TripStopStatus }}
-        </p>
-        <p>
-          <strong>Wheelchair Accessible:</strong>{{ popupInfo.WheelChairAccessible }}
-        </p>
-      </div>
-    </div>
+    <Popup
+      v-if="popupInfo.TimingPointName"
+      :popupInfo="popupInfo"
+      :popupLeft="popupLeft"
+      :popupTop="popupTop"
+      @close="closePopup"
+    />
+  </div>
+  <div v-else>
+    <p>Please select a journey.</p>
   </div>
 </template>
 
@@ -26,12 +22,20 @@ import Point from "ol/geom/Point";
 import { fromLonLat } from "ol/proj";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
-import CircleStyle from "ol/style/Circle";
-import { initializeMap, createPopup, addPopupToMap } from "../utils/map.js";
+import {
+  initializeMap,
+  createPopup,
+  addPopupToMap,
+} from "../utils/mapAndPopupInit.js";
 import { Style, Stroke, Fill } from "ol/style";
 import LineString from "ol/geom/LineString";
+import Popup from "./Popup.vue";
+import { createStopStyle } from "../utils/createStopStyle.js";
 
 export default {
+  components: {
+    Popup,
+  },
   data() {
     return {
       map: null,
@@ -43,6 +47,8 @@ export default {
         TripStopStatus: "",
         WheelChairAccessible: "",
       },
+      popupLeft: "0px",
+      popupTop: "0px",
     };
   },
 
@@ -52,7 +58,7 @@ export default {
     this.initializePopup();
     this.map.on("click", this.showPopup.bind(this));
 
-    // Load previous journey if available
+    // load previous journey if available
     const prevJourney = this.$route.params.id;
     if (prevJourney) {
       this.fetchBusStops(prevJourney);
@@ -69,7 +75,7 @@ export default {
         const vectorSource = new VectorSource();
         this.vectorLayer = new VectorLayer({
           source: vectorSource,
-          style: this.createStopStyle,
+          style: createStopStyle,
         });
 
         const lineVectorSource = new VectorSource();
@@ -84,7 +90,6 @@ export default {
             feature.set("TimingPointName", stop.TimingPointName);
             feature.set("TripStopStatus", stop.TripStopStatus);
             feature.set("WheelChairAccessible", stop.WheelChairAccessible);
-            // console.log(stop.TimingPointName, stop.TripStopStatus, stop.WheelChairAccessible);
             vectorSource.addFeature(feature);
 
             if (index > 0) {
@@ -111,7 +116,7 @@ export default {
           source: lineVectorSource,
           style: new Style({
             stroke: new Stroke({
-              color: "blue",
+              color: "black",
               width: 2,
             }),
           }),
@@ -120,21 +125,6 @@ export default {
       } else {
         console.error("Invalid busStops data:", busStops);
       }
-    },
-
-    createStopStyle(feature) {
-      return new Style({
-        image: new CircleStyle({
-          radius: 7,
-          fill: new Fill({
-            color: "blue",
-          }),
-          stroke: new Stroke({
-            color: "white",
-            width: 2,
-          }),
-        }),
-      });
     },
 
     async fetchBusStops() {
@@ -146,7 +136,7 @@ export default {
       const busStops = Object.values(journeyData.Stops);
       console.log("Fetched stops:", busStops);
 
-      // Remove old journey layer
+      // remove old journey layer
       if (this.vectorLayer) {
         this.map.removeLayer(this.vectorLayer);
         this.map.removeLayer(this.lineVectorLayer);
@@ -164,7 +154,6 @@ export default {
         event.pixel,
         (feature) => feature
       );
-
       if (feature) {
         this.popupInfo.TimingPointName = feature.get("TimingPointName");
         this.popupInfo.TripStopStatus = feature.get("TripStopStatus");
@@ -172,14 +161,19 @@ export default {
           "WheelChairAccessible"
         );
 
-        this.popup.setPosition(event.coordinate);
+        const popupPosition = event.coordinate;
+        const pixel = this.map.getPixelFromCoordinate(popupPosition);
+        this.popupLeft = pixel[0] + "px";
+        this.popupTop = pixel[1] + "px";
       } else {
         this.closePopup();
       }
     },
 
     closePopup() {
-      this.popup.setPosition(undefined);
+      this.popupInfo.TimingPointName = "";
+      this.popupInfo.TripStopStatus = "";
+      this.popupInfo.WheelChairAccessible = "";
     },
   },
 };
@@ -188,31 +182,11 @@ export default {
 <style scoped>
 .map-viewer {
   width: 100%;
-  height: 500px;
+  height: 43em;
+  padding: 1rem;
 }
-
 .map {
   width: 100%;
   height: 100%;
 }
-
-.ol-popup {
-  position: absolute;
-  background-color: white;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-  padding: 15px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-  bottom: 12px;
-  left: -50px;
-  min-width: 200px;
-}
-
-.ol-popup-closer {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  cursor: pointer;
-}
 </style>
-

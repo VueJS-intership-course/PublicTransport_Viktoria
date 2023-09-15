@@ -1,7 +1,7 @@
 <template>
   <div>
     <h1>Journeys List</h1>
-    <ul v-if="journeys && journeys.length">
+    <ul v-if="journeys && journeys.length" class="journeysList">
       <li v-for="journey in pageEntries" :key="journey">
         <router-link :to="{ name: 'journey-map', params: { id: journey } }">
           {{ journey }}
@@ -74,3 +74,38 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+h1 {
+  text-align: center;
+padding-bottom: 10px;
+}
+
+.journeysList {
+  list-style:inside;
+  padding: 0;
+  margin: 0;
+}
+
+.journeysList li {
+  margin-bottom: 20px;
+  text-align: left;
+  padding-left: 30px;
+}
+
+.journeysList li a {
+  text-decoration: none;
+  color: #000;
+  font-weight: bold;
+}
+
+.journeysList li a:hover {
+  text-decoration: underline;
+  color: blue;
+}
+
+.journeysList li a:active {
+  color: rgb(0, 0, 154);
+}
+
+</style>
