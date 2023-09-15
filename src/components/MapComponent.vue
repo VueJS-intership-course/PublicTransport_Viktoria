@@ -3,7 +3,17 @@
     <div id="map" ref="map" class="map"></div>
     <div id="popup" ref="popup" class="ol-popup">
       <button class="ol-popup-closer" @click="closePopup"></button>
-      <div id="popup-content"></div>
+      <div id="popup-content">
+        <p>
+          <strong>Timing Point Name:</strong> {{ popupInfo.TimingPointName }}
+        </p>
+        <p>
+          <strong>Trip Stop Status:</strong> {{ popupInfo.TripStopStatus }}
+        </p>
+        <p>
+          <strong>Wheelchair Accessible:</strong>{{ popupInfo.WheelChairAccessible }}
+        </p>
+      </div>
     </div>
   </div>
 </template>
@@ -28,16 +38,21 @@ export default {
       vectorLayer: null,
       popup: null,
       lineVectorLayer: null,
+      popupInfo: {
+        TimingPointName: "",
+        TripStopStatus: "",
+        WheelChairAccessible: "",
+      },
     };
   },
-  
+
   mounted() {
     console.log("MapComponent mounted");
     this.map = initializeMap(this.$refs.map);
     this.initializePopup();
     this.map.on("click", this.showPopup.bind(this));
 
-    //load prev journey if available
+    // Load previous journey if available
     const prevJourney = this.$route.params.id;
     if (prevJourney) {
       this.fetchBusStops(prevJourney);
@@ -69,7 +84,7 @@ export default {
             feature.set("TimingPointName", stop.TimingPointName);
             feature.set("TripStopStatus", stop.TripStopStatus);
             feature.set("WheelChairAccessible", stop.WheelChairAccessible);
-
+            // console.log(stop.TimingPointName, stop.TripStopStatus, stop.WheelChairAccessible);
             vectorSource.addFeature(feature);
 
             if (index > 0) {
@@ -131,7 +146,7 @@ export default {
       const busStops = Object.values(journeyData.Stops);
       console.log("Fetched stops:", busStops);
 
-      //remove old journey layer
+      // Remove old journey layer
       if (this.vectorLayer) {
         this.map.removeLayer(this.vectorLayer);
         this.map.removeLayer(this.lineVectorLayer);
@@ -139,7 +154,6 @@ export default {
       this.visualizeOnMap(busStops);
     },
 
-    //popup logic -> TODO
     initializePopup() {
       this.popup = createPopup(this.$refs.popup);
       addPopupToMap(this.map, this.popup);
@@ -152,20 +166,12 @@ export default {
       );
 
       if (feature) {
-        const stopInfo = {
-          TimingPointName: feature.get("TimingPointName"),
-          TripStopStatus: feature.get("TripStopStatus"),
-          WheelChairAccessible: feature.get("WheelChairAccessible"),
-        };
+        this.popupInfo.TimingPointName = feature.get("TimingPointName");
+        this.popupInfo.TripStopStatus = feature.get("TripStopStatus");
+        this.popupInfo.WheelChairAccessible = feature.get(
+          "WheelChairAccessible"
+        );
 
-        const popupContent = `
-            <p><strong>Timing Point Name:</strong> ${stopInfo.TimingPointName}</p>
-            <p><strong>Trip Stop Status:</strong> ${stopInfo.TripStopStatus}</p>
-            <p><strong>Wheelchair Accessible:</strong> ${stopInfo.WheelChairAccessible}</p>
-          `;
-
-        this.$refs.popup.querySelector("#popup-content").innerHTML =
-          popupContent;
         this.popup.setPosition(event.coordinate);
       } else {
         this.closePopup();
@@ -209,3 +215,4 @@ export default {
   cursor: pointer;
 }
 </style>
+
